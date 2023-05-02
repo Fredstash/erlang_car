@@ -128,9 +128,15 @@ handle_event({call,From}, neutral, drive, {Statem_name,State_data}) ->
     {next_state, neutral, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, reverse, neutral, {Statem_name,State_data}) ->
     {next_state, reverse, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, next, ready,{Statem_name,State_data}) ->
+handle_event({call,From}, brake_applied, reverse, {Statem_name,State_data}) ->
+    {next_state, {reverse, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, park, {reverse, brake_applied}, {Statem_name,State_data}) ->
+    {next_state, park, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, off, park, {Statem_name,State_data}) ->
+    {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, _, _,{Statem_name,State_data}) ->
     %Modify the state data and replace State_data below with the modified state data.
-    {next_state, ready,{Statem_name,State_data},[{reply,From,Statem_name}]}.
+    {next_state, error,{Statem_name,State_data},[{reply,From,Statem_name}]}.
 
 
 
