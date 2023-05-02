@@ -158,6 +158,6 @@ handle_event_test() ->
         ?_assertEqual({next_state, {reverse, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, reverse, {[],[]} )),
         ?_assertEqual({next_state, {park, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, {reverse, brake_applied}, {[],[]} )),
         ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, park, {[],[]} )),
-        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, neutral, {[],[]} )),
+        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, neutral, {[],[]} ))
         ]. 
 -endif.
