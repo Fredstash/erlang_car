@@ -23,7 +23,7 @@
 
 %%% Created : 24 June 2022 by Lee Barney <barney.cit@gmail.com>
 %%%-------------------------------------------------------------------
--module(gen_statem_template).
+-module(gen_statem_car).
 -behaviour(gen_statem).
 
 %% Only include the eunit testing library
@@ -114,7 +114,9 @@ brake_applied(Car) -> gen_statem:call(Car, brake_applied).
 %% Used to select which registered worker is to be used next in 
 %% a round robin fashion.
 %% @private
-handle_event({call,From}, park, {off, {park}},{Statem_name,State_data}) ->
+handle_event({call,From}, off, ready,{Statem_name,State_data}) ->
+    {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, park, off,{Statem_name,State_data}) ->
     {next_state, park, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, brake_applied, park,{Statem_name,State_data}) ->
     {next_state, {park, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
@@ -131,8 +133,10 @@ handle_event({call,From}, reverse, neutral, {Statem_name,State_data}) ->
 handle_event({call,From}, brake_applied, reverse, {Statem_name,State_data}) ->
     {next_state, {reverse, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, park, {reverse, brake_applied}, {Statem_name,State_data}) ->
-    {next_state, park, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+    {next_state, {park, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, off, park, {Statem_name,State_data}) ->
+    {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, off, neutral, {Statem_name,State_data}) ->
     {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, _, _,{Statem_name,State_data}) ->
     %Modify the state data and replace State_data below with the modified state data.
@@ -145,11 +149,12 @@ handle_event({call,From}, _, _,{Statem_name,State_data}) ->
 -ifdef(EUNIT).
 %%
 %% Unit tests go here. 
-handle_event_test() -> 
+handle_event_test_() -> 
     [   
-        ?_assertEqual({next_state, {off, park}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, ready, {[],[]} )),
+        % ?_assert(false),
+        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, ready, {[],[]} )),
         ?_assertEqual({next_state, park, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, off, {[],[]} )),
-        ?_assertEqual({next_state, {park, applied_brake}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, park, {[],[]} )),
+        ?_assertEqual({next_state, {park, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, park, {[],[]} )),
         ?_assertEqual({next_state, {reverse, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, reverse, {park, brake_applied}, {[],[]} )),
         ?_assertEqual({next_state, neutral, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, neutral, reverse, {[],[]} )),
         ?_assertEqual({next_state, drive, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, drive, neutral, {[],[]} )),
@@ -159,5 +164,5 @@ handle_event_test() ->
         ?_assertEqual({next_state, {park, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, {reverse, brake_applied}, {[],[]} )),
         ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, park, {[],[]} )),
         ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, neutral, {[],[]} ))
-        ]. 
+    ]. 
 -endif.
