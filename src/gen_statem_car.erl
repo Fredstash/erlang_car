@@ -124,6 +124,10 @@ handle_event({call,From}, neutral, reverse,{Statem_name,State_data}) ->
     {next_state, neutral, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, drive, neutral, {Statem_name,State_data}) ->
     {next_state, drive, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, neutral, drive, {Statem_name,State_data}) ->
+    {next_state, neutral, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, reverse, neutral, {Statem_name,State_data}) ->
+    {next_state, reverse, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, next, ready,{Statem_name,State_data}) ->
     %Modify the state data and replace State_data below with the modified state data.
     {next_state, ready,{Statem_name,State_data},[{reply,From,Statem_name}]}.
@@ -136,16 +140,18 @@ handle_event({call,From}, next, ready,{Statem_name,State_data}) ->
 %%
 %% Unit tests go here. 
 handle_event_test() -> 
-    [
-        ?_assertEqual({off, park}, handle_event({call, somewhere}, off, ready, {[],[]} )),
-        ?_assertEqual({on, park}, handle_event({call, somewhere}, on, off, {[],[]} )),
-        ?_assertEqual(park, handle_event({call, somewhere}, park, Any, {[],[]} )),
-        ?_assertEqual({park, applied_brake}, handle_event({call, somewhere}, brake_applied, park, {[],[]} )),
-        ?_assertEqual({park, rev}, handle_event({call, somewhere}, gas_applied, park, {[],[]} )),
-        ?_assertEqual({park, steering_applied}, handle_event({call, somewhere}, steering_applied, park, {[],[]} )),
-        ?_assertEqual({reverse, brake_applied}, handle_event({call, somewhere}, reverse, {park, brake_applied}, {[],[]} )),
-        ?_assertEqual({reverse, brake_applied}, handle_event({call, somewhere}, {reverse, brake_applied}, reverse, {[],[]} )),
-        ?_assertEqual({reverse, gas_applied}, handle_event({call, somewhere}, {reverse, gas_applied}, reverse, {[],[]} )),
-        ?_assertEqual({reverse, gas_applied}, handle_event({call, somewhere}, {reverse, gas_applied}, reverse, {[],[]} )),
+    [   
+        ?_assertEqual({next_state, {off, park}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, ready, {[],[]} )),
+        ?_assertEqual({next_state, park, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, off, {[],[]} )),
+        ?_assertEqual({next_state, {park, applied_brake}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, park, {[],[]} )),
+        ?_assertEqual({next_state, {reverse, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, reverse, {park, brake_applied}, {[],[]} )),
+        ?_assertEqual({next_state, neutral, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, neutral, reverse, {[],[]} )),
+        ?_assertEqual({next_state, drive, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, drive, neutral, {[],[]} )),
+        ?_assertEqual({next_state, neutral, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, neutral, drive, {[],[]} )),
+        ?_assertEqual({next_state, reverse, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, reverse, neutral, {[],[]} )),
+        ?_assertEqual({next_state, {reverse, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, reverse, {[],[]} )),
+        ?_assertEqual({next_state, {park, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, {reverse, brake_applied}, {[],[]} )),
+        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, park, {[],[]} )),
+        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, neutral, {[],[]} )),
         ]. 
 -endif.
