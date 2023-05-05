@@ -40,6 +40,8 @@
 -export([terminate/3,code_change/4,init/1,callback_mode/0]).
 %% State Callbacks
 -export([handle_event/4]).
+%%API Calls
+-export([off/1,on/1, park/1, reverse/1, neutral/1, drive/1, brake_applied/1]).
 
 
 %%%===================================================================
@@ -96,15 +98,16 @@ code_change(_Vsn, State, Data, _Extra) ->
 init(_Worker_ids) ->
     %% Set the initial state to be the list of available Worker_ids
     %% and types.
-    {ok, {off, {park}}, {}}.
+    io:format("Hello from init ~n"),
+    {ok, off, []}.
 %% @private
 callback_mode() -> handle_event_function.
 
 %%% state callback(s)
 
-off(Car) -> gen_statem:call(Car, off).
+off(Car) -> io:format("accessed off"),gen_statem:call(Car, off).
 on(Car) -> gen_statem:call(Car, on).
-park(Car) -> gen_statem:call(Car, park).
+park(Car) -> io:format("accessed park"), gen_statem:call(Car, park).
 reverse(Car) -> gen_statem:call(Car, reverse).
 neutral(Car) -> gen_statem:call(Car, neutral).
 drive(Car) -> gen_statem:call(Car, drive).
@@ -114,9 +117,11 @@ brake_applied(Car) -> gen_statem:call(Car, brake_applied).
 %% Used to select which registered worker is to be used next in 
 %% a round robin fashion.
 %% @private
-handle_event({call,From}, off, ready,{Statem_name,State_data}) ->
+handle_event({call,From}, off, [],{Statem_name,State_data}) ->
+    io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [off, ready, Statem_name,State_data]),
     {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, park, off,{Statem_name,State_data}) ->
+    io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [park, off, Statem_name,State_data]),
     {next_state, park, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, brake_applied, park,{Statem_name,State_data}) ->
     {next_state, {park, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
@@ -138,8 +143,9 @@ handle_event({call,From}, off, park, {Statem_name,State_data}) ->
     {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
 handle_event({call,From}, off, neutral, {Statem_name,State_data}) ->
     {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, _, _,{Statem_name,State_data}) ->
+handle_event({call,From}, NewState, CurrentState,{Statem_name,State_data}) ->
     %Modify the state data and replace State_data below with the modified state data.
+    io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [NewState, CurrentState, Statem_name,State_data]),
     {next_state, error,{Statem_name,State_data},[{reply,From,Statem_name}]}.
 
 
