@@ -34,14 +34,14 @@
 -endif.
 
 %% API
--export([start/2,start_link/2,stop/1]).
+-export([start/1, start/2, start_link/2, stop/1]).
 
 %% Supervisor Callbacks
 -export([terminate/3,code_change/4,init/1,callback_mode/0]).
 %% State Callbacks
 -export([handle_event/4]).
 %%API Calls
--export([off/1,on/1, park/1, reverse/1, neutral/1, drive/1, brake_applied/1]).
+-export([off/1,park/1, reverse/1, neutral/1, drive/1, brake_applied/1]).
 
 
 %%%===================================================================
@@ -59,6 +59,9 @@
 -spec start(atom(),term()) -> {ok, atom()}.
 start(Statem_name,Initial_state) ->
     gen_statem:start({local,Statem_name}, ?MODULE, Initial_state, []).
+
+start(Statem_name) ->
+    gen_statem:start({local,Statem_name}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -95,18 +98,18 @@ terminate(_Reason, _State, _Data) ->
 code_change(_Vsn, State, Data, _Extra) ->
     {ok,State,Data}.
 %% @private
-init(_Worker_ids) ->
+init(Initial_state) ->
     %% Set the initial state to be the list of available Worker_ids
     %% and types.
-    io:format("Hello from init ~n"),
-    {ok, off, []}.
+    % io:format("~p ~n", [Initial_state]),
+    {ok, Initial_state, []}.
 %% @private
 callback_mode() -> handle_event_function.
 
 %%% state callback(s)
 
 off(Car) -> io:format("accessed off"),gen_statem:call(Car, off).
-on(Car) -> gen_statem:call(Car, on).
+% on(Car) -> gen_statem:call(Car, on).
 park(Car) -> io:format("accessed park"), gen_statem:call(Car, park).
 reverse(Car) -> gen_statem:call(Car, reverse).
 neutral(Car) -> gen_statem:call(Car, neutral).
@@ -117,36 +120,37 @@ brake_applied(Car) -> gen_statem:call(Car, brake_applied).
 %% Used to select which registered worker is to be used next in 
 %% a round robin fashion.
 %% @private
-handle_event({call,From}, off, [],{Statem_name,State_data}) ->
-    io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [off, ready, Statem_name,State_data]),
-    {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, park, off,{Statem_name,State_data}) ->
-    io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [park, off, Statem_name,State_data]),
-    {next_state, park, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, brake_applied, park,{Statem_name,State_data}) ->
-    {next_state, {park, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, reverse, {park, brake_applied},{Statem_name,State_data}) ->
-    {next_state, {reverse, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, neutral, reverse,{Statem_name,State_data}) ->
-    {next_state, neutral, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, drive, neutral, {Statem_name,State_data}) ->
-    {next_state, drive, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, neutral, drive, {Statem_name,State_data}) ->
-    {next_state, neutral, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, reverse, neutral, {Statem_name,State_data}) ->
-    {next_state, reverse, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, brake_applied, reverse, {Statem_name,State_data}) ->
-    {next_state, {reverse, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, park, {reverse, brake_applied}, {Statem_name,State_data}) ->
-    {next_state, {park, brake_applied}, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, off, park, {Statem_name,State_data}) ->
-    {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, off, neutral, {Statem_name,State_data}) ->
-    {next_state, off, {Statem_name,State_data}, [{reply,From,Statem_name}]};
-handle_event({call,From}, NewState, CurrentState,{Statem_name,State_data}) ->
-    %Modify the state data and replace State_data below with the modified state data.
-    io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [NewState, CurrentState, Statem_name,State_data]),
-    {next_state, error,{Statem_name,State_data},[{reply,From,Statem_name}]}.
+% handle_event({call,From}, park, off,{Statem_name,State_data}) ->
+    % io:format("new state: ~p Currentstate: ~p State name:  State Data: ~n", [park, off]),
+    % {next_state, park, {Statem_name,State_data}, [{reply,From,Statem_name}]};
+handle_event({call,From}, off, [], []) ->
+    % io:format("new state: ~p Currentstate: ~p State name: ~p State Data~p ~n", [off, ready, Statem_name,State_data]),
+    {next_state, off, [], [{reply, From, off}]};
+handle_event({call,From}, park, off, []) ->
+    {next_state, park, [], [{reply,From, parked}]};
+handle_event({call,From}, brake_applied, park, []) ->
+    {next_state, {park, brake_applied}, [], [{reply,From, brake_applied}]};
+handle_event({call,From}, reverse, {park,brake_applied}, []) ->
+    {next_state, {reverse, brake_applied}, [], [{reply,From,reverse}]};
+handle_event({call,From}, neutral, reverse, []) ->
+    {next_state, neutral, [], [{reply,From,neutral}]};
+handle_event({call,From}, drive, neutral, []) ->
+    {next_state, drive, [], [{reply,From,drive}]};
+handle_event({call,From}, neutral, drive, []) ->
+    {next_state, neutral, [], [{reply,From,neutral}]};
+handle_event({call,From}, reverse, neutral, []) ->
+    {next_state, reverse, [], [{reply,From,reverse}]};
+handle_event({call,From}, brake_applied, reverse, []) ->
+    {next_state, {reverse, brake_applied}, [], [{reply,From,brake_applied}]};
+handle_event({call,From}, park, {reverse, brake_applied}, []) ->
+    {next_state, {park, brake_applied}, [], [{reply,From,parked}]};
+handle_event({call,From}, off, park, []) ->
+    {next_state, off, [], [{reply,From,off}]};
+handle_event({call,From}, off, neutral, []) ->
+    {next_state, off, [], [{reply,From,off}]};
+handle_event({call,From}, NewState, CurrentState, Data) ->
+    io:format("New State: ~p Current State: ~p State Data:~p ~n", [NewState, CurrentState, Data]),
+    {next_state, error,Data,[{reply,From,CurrentState}]}.
 
 
 
@@ -158,17 +162,17 @@ handle_event({call,From}, NewState, CurrentState,{Statem_name,State_data}) ->
 handle_event_test_() -> 
     [   
         % ?_assert(false),
-        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, ready, {[],[]} )),
-        ?_assertEqual({next_state, park, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, off, {[],[]} )),
-        ?_assertEqual({next_state, {park, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, park, {[],[]} )),
-        ?_assertEqual({next_state, {reverse, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, reverse, {park, brake_applied}, {[],[]} )),
-        ?_assertEqual({next_state, neutral, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, neutral, reverse, {[],[]} )),
-        ?_assertEqual({next_state, drive, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, drive, neutral, {[],[]} )),
-        ?_assertEqual({next_state, neutral, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, neutral, drive, {[],[]} )),
-        ?_assertEqual({next_state, reverse, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, reverse, neutral, {[],[]} )),
-        ?_assertEqual({next_state, {reverse, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, brake_applied, reverse, {[],[]} )),
-        ?_assertEqual({next_state, {park, brake_applied}, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, park, {reverse, brake_applied}, {[],[]} )),
-        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, park, {[],[]} )),
-        ?_assertEqual({next_state, off, {[],[]},[{reply,somewhere,[]}]}, handle_event({call, somewhere}, off, neutral, {[],[]} ))
+        ?_assertEqual({next_state, off, [],[{reply,somewhere,off}]}, handle_event({call, somewhere}, off, [], [] )),
+        ?_assertEqual({next_state, park, [],[{reply,somewhere,parked}]}, handle_event({call, somewhere}, park, off, [] )),
+        ?_assertEqual({next_state, {park, brake_applied}, [],[{reply,somewhere,brake_applied}]}, handle_event({call, somewhere}, brake_applied, park, [] )),
+        ?_assertEqual({next_state, {reverse, brake_applied}, [],[{reply,somewhere,reverse}]}, handle_event({call, somewhere}, reverse, {park, brake_applied}, [] )),
+        ?_assertEqual({next_state, neutral, [],[{reply,somewhere,neutral}]}, handle_event({call, somewhere}, neutral, reverse, [] )),
+        ?_assertEqual({next_state, drive, [],[{reply,somewhere,drive}]}, handle_event({call, somewhere}, drive, neutral, [] )),
+        ?_assertEqual({next_state, neutral, [],[{reply,somewhere,neutral}]}, handle_event({call, somewhere}, neutral, drive, [] )),
+        ?_assertEqual({next_state, reverse, [],[{reply,somewhere,reverse}]}, handle_event({call, somewhere}, reverse, neutral, [] )),
+        ?_assertEqual({next_state, {reverse, brake_applied}, [],[{reply,somewhere,brake_applied}]}, handle_event({call, somewhere}, brake_applied, reverse, [] )),
+        ?_assertEqual({next_state, {park, brake_applied}, [],[{reply,somewhere,parked}]}, handle_event({call, somewhere}, park, {reverse, brake_applied}, [] )),
+        ?_assertEqual({next_state, off, [],[{reply,somewhere,off}]}, handle_event({call, somewhere}, off, park, [] )),
+        ?_assertEqual({next_state, off, [],[{reply,somewhere,off}]}, handle_event({call, somewhere}, off, neutral, [] ))
     ]. 
 -endif.
